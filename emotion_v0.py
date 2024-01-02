@@ -104,8 +104,7 @@ class emotion_v0(gym.Env):
 
         pygame.draw.line(canvas, self.white, (160, 480), (160, 640), width=5)
         pygame.draw.line(canvas, self.white, (480, 480), (480, 640), width=5)
-        pygame.draw.line(canvas, self.white, (160, 480), (240, 480), width=5)
-        pygame.draw.line(canvas, self.white, (400, 480), (480, 480), width=5)
+        pygame.draw.line(canvas, self.white, (160, 480), (480, 480), width=5)
         
         #draw helper
         pygame.draw.circle(canvas, self.blue, self.helper_location.astype(int), 10)
@@ -147,7 +146,9 @@ class emotion_v0(gym.Env):
         self.agent_moving_vector = np.array([0, -5], dtype=np.float32)
         self.agent_rotation = 0
 
-        self._agent_location = np.array([320, 600], dtype=np.float32)
+        #self._agent_location = np.array([320, 600], dtype=np.float32)
+        self._agent_location = np.random.random_integers(160, 480, size=2)
+        self._agent_location = self._agent_location.astype(np.float32)
         self.helper_location = self.np_random.integers(160, 480, size=2, dtype=int)
         self.helper_location = self.helper_location.astype(np.float32)
 
@@ -217,7 +218,7 @@ class emotion_v0(gym.Env):
         for i, food in enumerate(self.foods):
             if self.distance2D(self._agent_location, food) <= 15:
                 self.foods[i] = np.random.random_integers(160, 480, size=2)
-                self.health += 4
+                self.health += 1
                 self.health = np.clip(self.health, 0, 100)
                 reward += 1
 
@@ -234,11 +235,12 @@ class emotion_v0(gym.Env):
         for i, enemy in enumerate(self.enemies):
             if self.distance2D(self._agent_location, enemy) <= 15:
                 if not self.with_helper and not self.enemies_captured[i]:
-                    self.health -= 1
+                    self.health -= 5
                     reward -= 5
                 else:
                     self.enemies_captured[i] = True
                     self.enemies_colors[i] = self.blue
+                    self.health += 5
                     reward += 5
 
                     self.with_helper = False
