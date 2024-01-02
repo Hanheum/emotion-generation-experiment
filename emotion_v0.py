@@ -20,7 +20,7 @@ class emotion_v0(gym.Env):
         assert render_mode is None or render_mode in self.metadata['render_modes']
         self.render_mode = render_mode
 
-        self.action_space = spaces.Discrete(9)  #forward, backward, turn left, turn right, grab, use, eat, sleep, no_op
+        self.action_space = spaces.Discrete(5)  #forward, backward, turn left, turn right, no operation
 
         self.window = None
         self.clock = None
@@ -32,12 +32,13 @@ class emotion_v0(gym.Env):
         self.red = np.array((255, 0, 0))
         self.blue = np.array((0, 0, 255))
         self.green = np.array((0, 255, 0))
+        self.white = np.array((255, 255, 255))
+        self.black = np.array((0, 0, 0))
 
         self.enemies_colors = np.array([self.red, self.red, self.red])
         self.enemies_captured = [False, False, False]
 
         self.health = 100
-        self.hunger = 100
 
         self.enemy_design = np.array([
             [-5, 5],
@@ -46,7 +47,7 @@ class emotion_v0(gym.Env):
         ])
 
         self.enemies_rotated_designs = np.zeros([3, 3, 2], dtype=np.float32)
-        self.enemies_moving_vector = [[0, -1], [0, -1], [0, -1]]
+        self.enemies_moving_vector = [[0, -3], [0, -3], [0, -3]]
         self.enemies_moving_vector = np.array(self.enemies_moving_vector, dtype=np.float32)
 
         self.agent_design = np.array([
@@ -59,12 +60,11 @@ class emotion_v0(gym.Env):
 
         self.foods = np.zeros([10, 2])
 
-        self.agent_moving_vector = np.array([0, -1], dtype=np.float32)
+        self.agent_moving_vector = np.array([0, -5], dtype=np.float32)
 
     def get_info(self):
         info = {
             'health': self.health,
-            'hunger': self.hunger
         }
         return info
     
@@ -100,15 +100,15 @@ class emotion_v0(gym.Env):
             self.clock = pygame.time.Clock()
 
         canvas = pygame.Surface((640, 640))
-        canvas.fill((0, 0, 0))
+        canvas.fill(self.black)
 
-        pygame.draw.line(canvas, (255, 255, 255), (160, 480), (160, 640), width=5)
-        pygame.draw.line(canvas, (255, 255, 255), (480, 480), (480, 640), width=5)
-        pygame.draw.line(canvas, (255, 255, 255), (160, 480), (240, 480), width=5)
-        pygame.draw.line(canvas, (255, 255, 255), (400, 480), (480, 480), width=5)
+        pygame.draw.line(canvas, self.white, (160, 480), (160, 640), width=5)
+        pygame.draw.line(canvas, self.white, (480, 480), (480, 640), width=5)
+        pygame.draw.line(canvas, self.white, (160, 480), (240, 480), width=5)
+        pygame.draw.line(canvas, self.white, (400, 480), (480, 480), width=5)
         
         #draw helper
-        pygame.draw.circle(canvas, (0, 0, 255), self.helper_location.astype(int), 10)
+        pygame.draw.circle(canvas, self.blue, self.helper_location.astype(int), 10)
 
         #draw enemies
         for i, enemy in enumerate(self.enemies):
@@ -142,13 +142,17 @@ class emotion_v0(gym.Env):
     def reset(self, seed=None):
         super().reset(seed=seed)
 
-        self.agent_moving_vector = np.array([0, -2], dtype=np.float32)
+        self.health = 100
+
+        self.agent_moving_vector = np.array([0, -5], dtype=np.float32)
         self.agent_rotation = 0
 
         self._agent_location = np.array([320, 600], dtype=np.float32)
         self.helper_location = self.np_random.integers(160, 480, size=2, dtype=int)
         self.helper_location = self.helper_location.astype(np.float32)
 
+        self.enemies_moving_vector = [[0, -3], [0, -3], [0, -3]]
+        self.enemies_moving_vector = np.array(self.enemies_moving_vector, dtype=np.float32)
         for enemy in range(3):
             enemy_rotation = random.randint(0, 360)
             enemy_location = self.np_random.integers(160, 480, size=2, dtype=int)
@@ -213,6 +217,8 @@ class emotion_v0(gym.Env):
         for i, food in enumerate(self.foods):
             if self.distance2D(self._agent_location, food) <= 15:
                 self.foods[i] = np.random.random_integers(160, 480, size=2)
+                self.health += 4
+                self.health = np.clip(self.health, 0, 100)
                 reward += 1
 
         #helper logics
@@ -226,11 +232,10 @@ class emotion_v0(gym.Env):
         
         #enemy movements
         for i, enemy in enumerate(self.enemies):
-            if self.distance2D(self._agent_location, enemy) <= 5:
+            if self.distance2D(self._agent_location, enemy) <= 15:
                 if not self.with_helper and not self.enemies_captured[i]:
-                    done = True
+                    self.health -= 1
                     reward -= 5
-                    break
                 else:
                     self.enemies_captured[i] = True
                     self.enemies_colors[i] = self.blue
@@ -241,9 +246,9 @@ class emotion_v0(gym.Env):
                     self.helper_location = self.helper_location.astype(np.float32)
 
             vec_E2A = self.normalize(self._agent_location - enemy)
-            if self.distance2D(enemy, self._agent_location) < 70 and vec_E2A.dot(self.enemies_moving_vector[i]) > 0.3 and self.enemies_captured[i]==False:
+            if self.distance2D(enemy, self._agent_location) < 70 and vec_E2A.dot(self.normalize(self.enemies_moving_vector[i])) > 0.3 and self.enemies_captured[i]==False:
                 self.enemies_rotated_designs[i] = self.turn_towards(self.enemy_design, enemy, self._agent_location)
-                self.enemies_moving_vector[i] = vec_E2A
+                self.enemies_moving_vector[i] = vec_E2A*3
                 self.enemies[i] += self.enemies_moving_vector[i]
             else:
                 if self.enemies_captured[i]:
@@ -260,7 +265,7 @@ class emotion_v0(gym.Env):
                 if x <= 0 or x >= 639 or y <= 0 or y >= 639 or is_in_safe_space:
                     theta = random.randint(0, 360)
                     self.enemies_rotated_designs[i] = self.rotate(self.enemy_design, theta)
-                    self.enemies_moving_vector[i] = self.rotate(np.array([0, -1], dtype=np.float32), theta)
+                    self.enemies_moving_vector[i] = self.rotate(np.array([0, -3], dtype=np.float32), theta)
                 
                 self.enemies[i] += self.enemies_moving_vector[i]
 
@@ -268,6 +273,9 @@ class emotion_v0(gym.Env):
 
         info = self.get_info()
         observation = self.render_frame()
+
+        if self.health <= 0:
+            done = True
         
         return observation, reward, done, info
     
