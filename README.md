@@ -20,5 +20,9 @@ emotion_vo_DQN.py: test env implementation
     Thus, agent can know required informations to complete the task, without actually storing every single steps(like Transformers), or stacking states(DQN with image inputs).
     The DQN is currently used for this project, but it can be changed into other RL methods, such as Policy Gradient, depending on situations.
 
+When agent touches food, it eats the food and gets instant reward. But it doesn't get reward when it touches helper. 
+But if agent hits enemy while carrying helper, it gets more reward than food. 
+Goal of this project is to approximate agent's behaviour to obtain helper, even it doesn't give reward.
+I personally consider this can be called as primative level of attachment. 
 
 contact: chh3653@gmail.com
