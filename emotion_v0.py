@@ -265,9 +265,9 @@ class emotion_v0(gym.Env):
                 is_in_safe_space = 480 <= y <= 640 and 160 <= x <= 480
 
                 if x <= 0 or x >= 639 or y <= 0 or y >= 639 or is_in_safe_space:
-                    theta = random.randint(0, 360)
-                    self.enemies_rotated_designs[i] = self.rotate(self.enemy_design, theta)
-                    self.enemies_moving_vector[i] = self.rotate(np.array([0, -3], dtype=np.float32), theta)
+                    theta = random.randint(90, 270)
+                    self.enemies_rotated_designs[i] = self.rotate(self.enemies_rotated_designs[i], theta)
+                    self.enemies_moving_vector[i] = self.rotate(self.enemies_moving_vector[i], theta)
                 
                 self.enemies[i] += self.enemies_moving_vector[i]
 
