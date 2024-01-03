@@ -1,25 +1,30 @@
 from emotion_v0 import emotion_v0
-from PIL import Image
+from collections import deque
 import numpy as np
 
-env = emotion_v0(render_mode='human')
+env = emotion_v0()
 
 observation, info = env.reset()
-#env.helper_location = np.array([320, 320], dtype=np.float32)
-observation = observation.astype(np.uint8)
-#img = Image.fromarray(observation)
-#img = img.resize((128, 128))
-#mg.save('/home/hanheum/Desktop/emotion_render_test.png')
-
 health = info['health']
-for i in range(3000):
-    #forward
-    action = 2
+done = False
 
-    observation, reward, done, info = env.step(action)
-    if info['health'] != health:
-        health = info['health']
-        print(health)
+memory = deque(maxlen=1000)
 
-    if done:
-        observation, info = env.reset()
+while not done:
+    action = env.action_space.sample()
+    next_observation, reward, done, info = env.step(action)
+    health = info['health']
+
+    memory.append((observation, action, reward, done, next_observation))
+    
+    observation = next_observation
+
+    print(len(memory))
+
+observations = [sample[0] for sample in memory]
+observations = np.array(observations, dtype=np.float32)/255.
+
+rewards = [sample[2] for sample in memory]
+
+print(observations.shape)
+print(rewards)
